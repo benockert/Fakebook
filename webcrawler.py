@@ -65,17 +65,18 @@ class WebCrawler(object):
 
         self.get_root()
 
-    # after logging in, get the root page's html (/fakebook/
+    # after logging in, get the root page's html (/fakebook/)
     def get_root(self):
         get_request = get_header + "csrftoken=" + self.csrf + "; sessionid=" + self.sessionid
         self.client.send(get_request.encode())
 
         # gets the server's response (html of the root webpage)
+        # THIS IS WHERE I AM RECEIVING A 408 TIMEOUT
         root_response = self.client.recv(4096).decode("latin-1")
 
         # TODO get the root page links and begin crawling
 
-    # TODO parse the html of each profil page, get the hrefs, add them to the queue
+    # TODO parse the html of each profile page, get the hrefs, add them to the queue
     def crawl(self, href):
         # GET request for the given profile page
         get = GET + " " + href + " " + VERSION + "\nHost: " + hostname + "\nCookie: csrftoken=" + self.csrf + \
