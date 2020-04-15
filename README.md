@@ -26,7 +26,8 @@ request the given page, and then carefully inspect the response for several cond
 if the response contained a flag. If so, we print it and continue on until all 5 flags are found. Then, we checked
 for 301, 403, 404, and 500 responses. If 301, we parse the response for the 'Location' header and send a new get
 request for that new page. If a 403 or 404, we stop looking for that page. If a 500, we retry getting that page until 
-we get a 200 OK response. 
+we get a 200 OK response. We also looked out for the "Transfer Encoding: chunked" header. If found, we would request 
+more data from the server until we received a "0", indicating no more data needed to be received. 
 
 This process of getting a profile page and then finding and getting all of its friends links continues until all 5
 flags are found, after which we shutdown the socket connection and exit the program. 
