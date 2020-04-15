@@ -31,6 +31,7 @@ original_list = []
 flags = []
 
 
+
 # called to connect to the fring.ccs.neu.edu server
 def connect():
     global client
@@ -70,14 +71,13 @@ class WebCrawler(object):
             sleep(.1)
             response = client.recv(4096).decode("latin-1")
 
+        # after receiving a response, adds the link to the explored page
+        explored.append(page)
+
         # handles chunked encoding
         chunked_flag = response.find("Transfer-Encoding: chunked")
         if chunked_flag != -1:
-            chunk = client.recv(4096).decode("latin-1")
-            response += chunk
-
-        # after receiving a response, adds the link to the explored page
-        explored.append(page)
+            response += client.recv(4096).decode("latin-1")
 
         # looks for flags in the server response
         flag_mark = response.find(FLAG)
@@ -156,11 +156,9 @@ class WebCrawler(object):
 
     # crawls through the given list of profiles
     def crawl(self, list_of_friends, depth):
-        if len(list_of_friends) == 1:
-            self.crawl(original_list, depth)
         for href in list_of_friends:
             # sets a maximum recursion depth of 200 calls
-            if depth >= 200:
+            if depth >= 600:
                 break
             # checks to see if the current href has already been explored
             if href in explored:
@@ -251,6 +249,8 @@ def main():
     connect()
     # logs into the server and begins crawling through the site
     crawler.login()
+
+    print("Error: please re-run the program...")
 
 
 main()
