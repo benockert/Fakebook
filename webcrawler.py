@@ -24,6 +24,8 @@ get_header = GET + " " + ROOT + " " + VERSION + "\nHost: %s\nCookie: " % hostnam
 explored = ['http://www.northeastern.edu', 'mailto:cbw@ccs.neu.edu']
 # Filter for non-domain pages
 non_domain = ['/fakebook/', 'http://www.northeastern.edu', 'mailto:cbw@ccs.neu.edu']
+# Original list of friends
+original_list = []
 
 # a list to store the secret flags
 flags = []
@@ -59,7 +61,6 @@ class WebCrawler(object):
 
         # sends and recieves from the socket
         client.sendall(get.encode())
-        sleep(.05)
         response = client.recv(4096).decode("latin-1")
 
         # if there is no response, reconnects to the server and resends the get request
@@ -68,6 +69,12 @@ class WebCrawler(object):
             client.sendall(get.encode())
             sleep(.1)
             response = client.recv(4096).decode("latin-1")
+
+        # handles chunked encoding
+        chunked_flag = response.find("Transfer-Encoding: chunked")
+        if chunked_flag != -1:
+            chunk = client.recv(4096).decode("latin-1")
+            response += chunk
 
         # after receiving a response, adds the link to the explored page
         explored.append(page)
@@ -90,9 +97,12 @@ class WebCrawler(object):
         internal_error = response.find(VERSION + " 500")
         # if a page has been moved, parses the response to find the new location, and gets the new page
         if moved_error != -1:
+            # looks for the Location header
             location_start = response.find("Location:")
-            location_end = response.find("Content-Length")
-            new_location = response[location_start + 10:location_end - 2]
+            # looks for the first new line character after the Location header
+            location_end = response[location_start:].find("\n")
+            # finds the new location url
+            new_location = response[location_start + 10:location_end + location_start]
             return self.get_page(new_location)
         # if Forbidden or Not Found, returns None
         elif forbidden_error != -1 or not_found_error != -1:
@@ -146,6 +156,8 @@ class WebCrawler(object):
 
     # crawls through the given list of profiles
     def crawl(self, list_of_friends, depth):
+        if len(list_of_friends) == 1:
+            self.crawl(original_list, depth)
         for href in list_of_friends:
             # sets a maximum recursion depth of 200 calls
             if depth >= 200:
@@ -176,6 +188,7 @@ class WebCrawler(object):
                 root_links.remove(link)
 
         # begins the crawl through Fakebook, starting with the links on the main landing page
+        original_list.extend(root_links)
         self.crawl(root_links, 1)
 
     # logs in to Fakebook with the username and password given as inputs to the program
@@ -203,13 +216,16 @@ class WebCrawler(object):
         post = post_header + "csrftoken=" + self.csrf + "; sessionid=" + self.sessionid + content_length + form_entry
 
         client.send(post.encode())
+        sleep(1)
 
         # gets the server's response to the post
         post_response = client.recv(4096).decode("latin-1")
 
-        if post_response.find("302 FOUND") == -1:
-            print("LOGIN FAILED...please re-run the program")
+        if post_response.find("Please enter a correct username and password") != -1:
+            print("LOGIN FAILED...incorrect username or password")
             exit(1)
+        if post_response.find("302 FOUND") == -1:
+            self.login()
 
         # looks for the next session id returned by the server
         new_id_start = post_response.find('sessionid=') + 10
